@@ -1,0 +1,8 @@
+{
+  "name": "minimum_web_speed_test",
+  "version": "1.1.0",
+  "author": "ylxdzsw@gmail.com",
+  "dependencies": {
+    "koa": "^2.7.0"
+  }
+}
