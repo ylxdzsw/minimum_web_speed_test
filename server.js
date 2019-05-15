@@ -3,30 +3,38 @@
 const fs = require('fs')
 const http = require('http')
 const { performance } = require('perf_hooks')
-const crypto = require('crypto')
 const koa = require('koa')
 const app = new koa()
 
 const page = `<script>${fs.readFileSync('client.js')}</script>`
 
+const rand_buffer = (size=1<<20) => new Uint8Array(size).map(x => 256 * Math.random())
+
+app.use(async (ctx, next) => {
+    const ACAO = "Access-Control-Allow-Origin"
+    const ACRH = "Access-Control-Request-Headers"
+    const ACAH = "Access-Control-Allow-Headers"
+    const ACRM = "Access-Control-Request-Method"
+    const ACAM = "Access-Control-Allow-Methods"
+
+    ctx.set(ACAO, '*')
+    if (ctx.get(ACRH)) ctx.set(ACAH, ctx.get(ACRH))
+    if (ctx.get(ACRM)) ctx.set(ACAM, ctx.get(ACRM))
+
+    if (ctx.method == 'OPTION') return ctx.status = 200
+    return next()
+})
+
 app.use(async ctx => {
     switch (ctx.path) {
-        case '/':
-            return ctx.body = page
+        case '/': return ctx.body = page
         case '/upload': return new Promise((resolve, reject) => {
-            ctx.request.on('end', () => {
-                resolve(ctx.status = 200)
-            })
-            ctx.request.resume()
+            ctx.request.req.on('end', () => resolve(ctx.status = 200))
+            ctx.request.req.resume()
         })
-        case '/download': return new Promise((resolve, reject) => {
-            crypto.randomBytes(1 << 20, (err, buf) => {
-                resolve(ctx.body = buf)
-            })
-        })
+        case '/download': return ctx.body = rand_buffer()
         case '/time': return ctx.body = '' + performance.now()
-        default:
-            ctx.status = 404
+        default: ctx.status = 404
     }
 })
 
