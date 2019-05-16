@@ -9,6 +9,7 @@ const app = new koa()
 const page = `<script>${fs.readFileSync('client.js')}</script>`
 
 const rand_buffer = (size=1<<20) => new Uint8Array(size).map(x => 256 * Math.random())
+const buf = rand_buffer()
 
 app.use(async (ctx, next) => {
     const ACAO = "Access-Control-Allow-Origin"
@@ -32,7 +33,7 @@ app.use(async ctx => {
             ctx.request.req.on('end', () => resolve(ctx.status = 200))
             ctx.request.req.resume()
         })
-        case '/download': return ctx.body = rand_buffer()
+        case '/download': return ctx.body = buf //rand_buffer()
         case '/time': return ctx.body = '' + performance.now()
         default: ctx.status = 404
     }

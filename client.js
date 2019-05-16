@@ -2,7 +2,7 @@ document.write(`
     <input type=radio name=method id=method-xhr checked>xhr</input>
     <input type=radio name=method id=method-fetch>fetch</input>
 
-    <input type=checkbox id=log-events checked>log events</input>
+<!--<input type=checkbox id=log-events checked>log events</input>-->
 <!--<input type=checkbox id=web-worker>use web worker</input>-->
 
     <input type=checkbox id=test-latency checked>test latency</input>
@@ -33,8 +33,10 @@ async function start() {
     if ($('#test-upload').checked)
         result.upload_detail = await test_upload(type)
 
+    const summary = summarize(result)
+
     $('#start').remove()
-    $('body').innerHTML += '<pre id=result>' + JSON.stringify(result, null, '  ')
+    $('body').innerHTML += '<pre id=result>' + JSON.stringify({ summary, ...result }, null, '  ')
 }
 
 // It may establish new TCP connections, and there may be packet losses, so we use the minimum latecny observed
@@ -109,18 +111,20 @@ function test_download(type) {
 
     return new Promise((resolve, reject) => setTimeout(() => {
         finished = true
-        resolve(events)
+        const cut = [ ...events ]
+        setTimeout(() => resolve(cut), 3000) // wait for last tests to finish
     }, 15000)) // test 15 seconds
 }
 
 function test_upload(type) {
     const events = []
     let finished = false
+    const buf = rand_buffer()
 
     const test_xhr = () => {
         if (finished) return
 
-        const buf = rand_buffer()
+        // const buf = rand_buffer()
         const event = { start: performance.now(), size: buf.byteLength }
         const req = new XMLHttpRequest()
 
@@ -142,7 +146,7 @@ function test_upload(type) {
         if (finished) return
 
         try {
-            const buf = rand_buffer()
+            // const buf = rand_buffer()
             const event = { start: performance.now(), size: buf.byteLength }
             await fetch(`${server}/upload?gid=${gid++}`, {
                 method: 'POST', mode: 'cors', body: buf
@@ -161,6 +165,31 @@ function test_upload(type) {
 
     return new Promise((resolve, reject) => setTimeout(() => {
         finished = true
-        resolve(events)
+        const cut = [ ...events ]
+        setTimeout(() => resolve(cut), 3000) // wait for last tests to finish
     }, 15000)) // test 15 seconds
+}
+
+function summarize({ latency_detail, download_detail, upload_detail }) {
+    const summary = {}
+
+    if (latency_detail) {
+        summary.latency = latency_detail.map(({ start, end }) => end - start).sort()[0] / 1000 + 'ms'
+    }
+
+    if (download_detail) {
+        const makespan = download_detail.map(x => x.end).reduce((x, y) => x > y ? x : y) -
+                         download_detail.map(x => x.start).reduce((x, y) => x < y ? x : y)
+        const total_size = download_detail.map(x => x.size).reduce((x, y) => x + y)
+        summary.download = (total_size * 8 / 1000000) / (makespan / 1000) + 'mbit'
+    }
+
+    if (upload_detail) {
+        const makespan = upload_detail.map(x => x.end).reduce((x, y) => x > y ? x : y) -
+                         upload_detail.map(x => x.start).reduce((x, y) => x < y ? x : y)
+        const total_size = upload_detail.map(x => x.size).reduce((x, y) => x + y)
+        summary.upload = (total_size * 8 / 1000000) / (makespan / 1000) + 'mbit'
+    }
+
+    return summary
 }
