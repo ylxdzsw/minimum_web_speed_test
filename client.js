@@ -12,7 +12,7 @@ document.write(`
     <button id=start onclick=start()>Start</button>
 `)
 
-const rand_buffer = (size=1<<20) => new Uint8Array(size).map(x => 256 * Math.random())
+const rand_buffer = (size=1<<22) => new Uint8Array(size).map(x => 256 * Math.random())
 const server = '//' + location.host.split(':')[0] + ':' + (parseInt(location.host.split(':')[1]) + 1)
 let gid = 0 // global unique id
 
@@ -35,8 +35,7 @@ async function start() {
 
     const summary = summarize(result)
 
-    $('#start').remove()
-    $('body').innerHTML += '<pre id=result>' + JSON.stringify({ summary, ...result }, null, '  ')
+    $('body').innerHTML = '<pre id=result>' + JSON.stringify({ summary, ...result }, null, '  ')
 }
 
 // It may establish new TCP connections, and there may be packet losses, so we use the minimum latecny observed
@@ -82,7 +81,8 @@ function test_download(type) {
             event.size = req.response.length
             event.end = performance.now()
             events.push(event)
-            setTimeout(test_xhr, 0)
+            // setTimeout(test_xhr, 0)
+            test_xhr()
         })
         req.addEventListener('error', e => setTimeout(test_xhr, 0))
         req.addEventListener('abort', e => setTimeout(test_xhr, 0))
@@ -102,7 +102,8 @@ function test_download(type) {
         } catch (e) {
             console.error(e)
         } finally {
-            setTimeout(test_fetch, 0)
+            // setTimeout(test_fetch, 0)
+            test_fetch()
         }
     }
 
@@ -134,7 +135,8 @@ function test_upload(type) {
         req.addEventListener('load', () => {
             event.end = performance.now()
             events.push(event)
-            setTimeout(test_xhr, 0)
+            // setTimeout(test_xhr, 0)
+            test_xhr()
         })
         req.addEventListener('error', e => setTimeout(test_xhr, 0))
         req.addEventListener('abort', e => setTimeout(test_xhr, 0))
@@ -156,7 +158,8 @@ function test_upload(type) {
         } catch (e) {
             console.error(e)
         } finally {
-            setTimeout(test_fetch, 0)
+            // setTimeout(test_fetch, 0)
+            test_fetch()
         }
     }
 

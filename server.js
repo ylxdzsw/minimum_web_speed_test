@@ -8,7 +8,7 @@ const app = new koa()
 
 const page = `<script>${fs.readFileSync('client.js')}</script>`
 
-const rand_buffer = (size=1<<20) => new Uint8Array(size).map(x => 256 * Math.random())
+const rand_buffer = (size=1<<22) => Buffer.allocUnsafe(size).map(x => 256 * Math.random())
 const buf = rand_buffer()
 
 app.use(async (ctx, next) => {
