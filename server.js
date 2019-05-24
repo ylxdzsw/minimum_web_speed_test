@@ -39,5 +39,5 @@ app.use(async ctx => {
     }
 })
 
-http.createServer(app.callback()).listen(3905)
-http.createServer(app.callback()).listen(3906)
+for (let i = 0; i < 10; i++)
+    http.createServer(app.callback()).listen(8730+i)

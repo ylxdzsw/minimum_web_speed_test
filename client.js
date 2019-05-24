@@ -13,7 +13,7 @@ document.write(`
 `)
 
 const rand_buffer = (size=1<<22) => new Uint8Array(size).map(x => 256 * Math.random())
-const server = '//' + location.host.split(':')[0] + ':' + (parseInt(location.host.split(':')[1]) + 1)
+const server = (i=1) => '//' + location.host.split(':')[0] + ':' + (parseInt(location.host.split(':')[1]) + i)
 let gid = 0 // global unique id
 
 async function start() {
@@ -51,12 +51,12 @@ async function test_latency(type) {
         })
         req.addEventListener('error', reject)
         req.addEventListener('abort', reject)
-        req.open('GET', `${server}/time?gid=${gid++}`)
+        req.open('GET', `${server()}/time?gid=${gid++}`)
         req.send()
     })
     const test_fetch = async () => {
         const event = { start: performance.now() }
-        const res = await fetch(`${server}/time?gid=${gid++}`)
+        const res = await fetch(`${server()}/time?gid=${gid++}`)
         event.server = parseFloat(await res.text())
         event.end = performance.now()
         return event
@@ -72,7 +72,7 @@ function test_download(type) {
     const events = []
     let finished = false
 
-    const test_xhr = () => {
+    const test_xhr = i => {
         if (finished) return
 
         const event = { start: performance.now() }
@@ -81,34 +81,32 @@ function test_download(type) {
             event.size = req.response.length
             event.end = performance.now()
             events.push(event)
-            // setTimeout(test_xhr, 0)
-            test_xhr()
+            test_xhr(i)
         })
         req.addEventListener('error', e => setTimeout(test_xhr, 0))
         req.addEventListener('abort', e => setTimeout(test_xhr, 0))
-        req.open('GET', `${server}/download?gid=${gid++}`)
+        req.open('GET', `${server(i)}/download?gid=${gid++}`)
         req.send()
     }
 
-    const test_fetch = async () => {
+    const test_fetch = async i => {
         if (finished) return
 
         try {
             const event = { start: performance.now() }
-            const res = await fetch(`${server}/download?gid=${gid++}`)
+            const res = await fetch(`${server(i)}/download?gid=${gid++}`)
             event.size = (await res.arrayBuffer()).byteLength
             event.end = performance.now()
             events.push(event)
         } catch (e) {
             console.error(e)
         } finally {
-            // setTimeout(test_fetch, 0)
-            test_fetch()
+            test_fetch(i)
         }
     }
 
     for (let i = 0; i < 5; i++) // 5 concurrent connections
-        type == 'xhr' ? test_xhr() : test_fetch()
+        type == 'xhr' ? test_xhr(i+1) : test_fetch(i+1)
 
     return new Promise((resolve, reject) => setTimeout(() => {
         finished = true
@@ -122,7 +120,7 @@ function test_upload(type) {
     let finished = false
     const buf = rand_buffer()
 
-    const test_xhr = () => {
+    const test_xhr = i => {
         if (finished) return
 
         // const buf = rand_buffer()
@@ -135,22 +133,21 @@ function test_upload(type) {
         req.addEventListener('load', () => {
             event.end = performance.now()
             events.push(event)
-            // setTimeout(test_xhr, 0)
-            test_xhr()
+            test_xhr(i)
         })
         req.addEventListener('error', e => setTimeout(test_xhr, 0))
         req.addEventListener('abort', e => setTimeout(test_xhr, 0))
-        req.open('POST', `${server}/upload?gid=${gid++}`)
+        req.open('POST', `${server(i)}/upload?gid=${gid++}`)
         req.send(buf)
     }
 
-    const test_fetch = async () => {
+    const test_fetch = async i => {
         if (finished) return
 
         try {
             // const buf = rand_buffer()
             const event = { start: performance.now(), size: buf.byteLength }
-            await fetch(`${server}/upload?gid=${gid++}`, {
+            await fetch(`${server(i)}/upload?gid=${gid++}`, {
                 method: 'POST', mode: 'cors', body: buf
             }).then(x => x.arrayBuffer())
             event.end = performance.now()
@@ -158,13 +155,12 @@ function test_upload(type) {
         } catch (e) {
             console.error(e)
         } finally {
-            // setTimeout(test_fetch, 0)
-            test_fetch()
+            test_fetch(i)
         }
     }
 
     for (let i = 0; i < 5; i++) // 5 concurrent connections
-        type == 'xhr' ? test_xhr() : test_fetch()
+        type == 'xhr' ? test_xhr(i+1) : test_fetch(i+1)
 
     return new Promise((resolve, reject) => setTimeout(() => {
         finished = true
